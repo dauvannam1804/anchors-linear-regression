@@ -242,7 +242,7 @@ Sinh 3 rule ứng viên:
 
 Công thức tính precision:
 
-prec(A) = số mẫu có f(z) = f(x) / tổng số mẫu z
+$\text{prec}(A) = \dfrac{\text{số mẫu có } f(z) = f(x)}{\text{tổng số mẫu } z}$
 
 Kết quả:
 
