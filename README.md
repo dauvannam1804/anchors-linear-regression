@@ -60,7 +60,7 @@ Công thức chính thức định nghĩa một **Anchor** như sau:
 
 ---
 
-### 🌸 Ví dụ với Iris
+### 🌸 Ví dụ với bài toán phân loại hoa Iris
 Giả sử mô hình dự đoán cho mẫu x = [5.1, 3.5, 1.4, 0.2] là **“Setosa”**.  
 Nếu ta chọn:
 $A = \{\text{petal length < 2.0}, \text{petal width < 0.5}\}$
