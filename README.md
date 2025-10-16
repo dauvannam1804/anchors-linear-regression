@@ -176,155 +176,176 @@ function BeamSearch(f, x, D, τ)
     return A*                                   
 ```
 
-🪜 Các bước chi tiết của Beam Search
-------------------------------------
+# 🪜 Các bước chi tiết của Beam Search
 
-### Bước 1 – Khởi tạo
+## Bước 1 – Khởi tạo
 
-Anchor tốt nhất ban đầu: A* = null
+**Anchor tốt nhất:** $A^* = \text{null}$
 
-Tập rule ban đầu: A0 = ∅
+**Tập rule ban đầu:** $A_0 = \emptyset$
 
-### Bước 2 – Sinh các rule ứng viên
+## Bước 2 – Sinh các rule ứng viên
 
 Từ mỗi rule hiện tại, thêm 1 điều kiện (predicate) để tạo rule mới.
 
-Ví dụ:
-Nếu At−1 = {PetalLength < 2.0}, thì có thể sinh ra các rule mới:
+**Ví dụ:**
 
-```
-At = {
-    {PetalLength < 2.0, PetalWidth < 0.5},
-    {PetalLength < 2.0, SepalLength < 5.0},
-    …
-}
-```
+Nếu $A_{t-1} = \{\text{PetalLength} < 2.0\}$
 
-### Bước 3 – Chọn B rule tốt nhất (KL-LUCB)
+thì có thể sinh các rule mới:
 
-Ở bước này, thuật toán đánh giá độ chính xác (precision) của từng rule bằng cách lấy mẫu nhiễu z ∼ D(z∣A).
+$$A_t = \{\{\text{PetalLength} < 2.0, \text{PetalWidth} < 0.5\}, \{\text{PetalLength} < 2.0, \text{SepalLength} < 5.0\}, \ldots\}$$
 
-**Công thức:**
+## Bước 3 – Chọn B rule tốt nhất (KL-LUCB)
 
-> prec(A) = E<sub>z ~ D(z|A)</sub>[<b>1</b><sub>f(x)=f(z)</sub>]
+Ở bước này, thuật toán đánh giá độ chính xác (precision) của từng rule bằng cách lấy mẫu nhiễu $z \sim D(z|A)$.
 
-**Tức là:**
+**Công thức tính precision:**
 
-$\text{prec}(A) = \dfrac{\text{số mẫu } z \text{ có } f(z) = f(x)}{\text{tổng số mẫu } z \text{ được sinh ra}}$
+$$\text{prec}(A) = E_{z \sim D(z|A)} [1_{f(x) = f(z)}]$$
 
+Tức là:
+
+$$\text{prec}(A) = \frac{\text{số mẫu } z \text{ mà } f(z) = f(x)}{\text{tổng số mẫu } z \text{ sinh ra}}$$
 
 **KL-LUCB** (Kullback–Leibler Lower & Upper Confidence Bounds) giúp chọn B rule có độ chính xác tốt nhất, đảm bảo:
 
-$P(min_{A ∈ A} prec(A) ≥ min_{A' ∈ A*} prec(A') − ε) ≥ 1 − δ$
+$$P\left(\min_{A \in A} \text{prec}(A) \geq \min_{A' \in A^*} \text{prec}(A') - \varepsilon\right) \geq 1 - \delta$$
 
-Nói cách khác, các rule được chọn đều gần với rule tốt nhất, sai lệch tối đa ε với xác suất tin cậy 1 − δ.
+Nói cách khác, các rule được chọn đều gần với rule tốt nhất, sai lệch tối đa $\varepsilon$ với xác suất tin cậy $1 - \delta$.
 
-#### Ví dụ chi tiết cho bước 3
+**Ví dụ chi tiết cho bước 3:**
 
-Giả sử ta đang làm việc với mẫu Iris Setosa:
+Giả sử có 3 rule:
 
-| Thuộc tính | Giá trị |
-|-----------|--------|
-| SepalLength | 4.9 |
-| SepalWidth | 3.0 |
-| PetalLength | 1.4 |
-| PetalWidth | 0.2 |
+| Rule | Precision | Lower bound $\text{prec}_\text{lb}$ | Giữ lại? |
+|------|-----------|-----------------------------------|----------|
+| A₁   | 0.67      | 0.60                              | ✅       |
+| A₂   | 0.67      | 0.59                              | ✅       |
+| A₃   | 0.67      | 0.50                              | ❌       |
 
-Mô hình dự đoán: f(x) = Setosa
+KL-LUCB giữ lại 2 rule tốt nhất (B=2) có confidence cao nhất — tức là A₁ và A₂.
 
-Sinh 3 rule ứng viên:
+## Bước 4 – Cập nhật anchor tốt nhất
 
-| Rule ID | Rule | Mẫu nhiễu z (PetalLength, PetalWidth) | f(z) | Giống f(x)? |
-|---------|------|---------------------------------------|------|-------------|
-| A₁ | PetalLength < 2.0 | (1.6, 0.3), (1.8, 0.4), (3.0, 1.0) | Setosa, Setosa, Versicolor | ✅✅❌ |
-| A₂ | PetalWidth < 0.5 | (0.3, 0.2), (0.4, 0.3), (1.0, 0.6) | Setosa, Setosa, Versicolor | ✅✅❌ |
-| A₃ | SepalLength < 5.0 | (4.7, 3.0), (4.9, 2.8), (5.5, 3.1) | Setosa, Setosa, Versicolor | ✅✅❌ |
+Nếu rule $A$ có:
 
-Công thức tính precision:
+$$\text{prec}_\text{lb}(A) > \tau \text{ và } \text{cov}(A) > \text{cov}(A^*)$$
 
-$\text{prec}(A) = \dfrac{\text{số mẫu } z \text{ có } f(z) = f(x)}{\text{tổng số mẫu } z \text{ được sinh ra}}$
+thì cập nhật $A^* = A$.
 
-Kết quả:
+**Công thức tính Coverage:**
+
+$$\text{cov}(A) = P(z \sim D)[A(z) = 1]$$
+
+hay gần đúng bằng:
+
+$$\text{cov}(A) = \frac{\text{số mẫu thỏa } A}{\text{tổng số mẫu trong } D}$$
+
+## Bước 5 – Dừng khi không còn ứng viên
+
+Khi $A_t = \emptyset$, thuật toán dừng và trả về $A^*$ — anchor cuối cùng.
+
+---
+
+# 🌼 Ví dụ chi tiết: Phân loại hoa Iris
+
+## Dữ liệu
+
+**Mẫu $x$:**
+
+| Thuộc tính   | Giá trị |
+|--------------|--------|
+| SepalLength  | 4.9    |
+| SepalWidth   | 3.0    |
+| PetalLength  | 1.4    |
+| PetalWidth   | 0.2    |
+
+**Mô hình dự đoán:** $f(x) = \text{Setosa}$
+
+Ta muốn tìm anchor $A$ sao cho:
+
+$$\text{prec}(A) \geq \tau = 0.95$$
+
+và coverage cao nhất.
+
+**Giả sử:** $B = 2, \varepsilon = 0.05, \delta = 0.1$
+
+### 🔹 Bước 1 – Khởi tạo
+
+$$A_0 = \emptyset, A^* = \text{null}$$
+
+### 🔹 Bước 2 – Sinh rule ứng viên ban đầu
+
+Giả sử ta sinh 3 rule cơ bản:
+
+| Rule ID | Rule                | Mẫu nhiễu z (minh họa)            | f(z)                                     | Giống f(x)? |
+|---------|---------------------|-----------------------------------|------------------------------------------|-------------|
+| A₁      | PetalLength < 2.0   | (1.6, 0.3), (1.8, 0.4), (3.0, 1.0) | Setosa, Setosa, Versicolor              | ✅✅❌      |
+| A₂      | PetalWidth < 0.5    | (0.3, 0.2), (0.4, 0.3), (1.0, 0.6) | Setosa, Setosa, Versicolor              | ✅✅❌      |
+| A₃      | SepalLength < 5.0   | (4.7, 3.0), (4.9, 2.8), (5.5, 3.1) | Setosa, Setosa, Versicolor              | ✅✅❌      |
+
+⚠️ **Ghi chú:**
+
+- Mẫu nhiễu $z$ chỉ chứa 2 đặc trưng liên quan đến rule hiện tại (ví dụ chỉ PetalLength và PetalWidth).
+- Các đặc trưng khác được cố định từ mẫu gốc $x$, để mô hình vẫn có thể dự đoán hợp lệ.
+
+**Công thức precision:**
+
+$$\text{prec}(A) = \frac{\text{số mẫu có } f(z) = f(x)}{\text{tổng số mẫu } z}$$
 
 | Rule | Precision | Coverage (ước lượng) |
 |------|-----------|---------------------|
-| A₁ | 2/3 = 0.67 | 0.60 |
-| A₂ | 2/3 = 0.67 | 0.55 |
-| A₃ | 2/3 = 0.67 | 0.40 |
+| A₁   | 2/3 = 0.67 | 0.60                |
+| A₂   | 2/3 = 0.67 | 0.55                |
+| A₃   | 2/3 = 0.67 | 0.40                |
 
-Chưa rule nào đạt τ = 0.95.
-KL-LUCB chọn A₁, A₂ để mở rộng.
+Chưa rule nào đạt $\tau = 0.95$. KL-LUCB chọn A₁, A₂ để mở rộng.
 
-### Cách tính Coverage chi tiết
-
-Công thức chính thức:
-
-$cov(A) = P_{z ~ D} [A(z) = 1]$
-
-Tức là tỷ lệ mẫu trong toàn bộ phân phối D (hoặc trong tập dữ liệu) thỏa điều kiện của rule.
-
-Trong thực tế, ta ước lượng bằng tần suất:
-
-$\text{cov}(A) = \dfrac{\text{số mẫu thỏa rule } A}{\text{tổng số mẫu trong } D}$
-
-
-**Ví dụ:**
-
-Giả sử tập dữ liệu có 100 mẫu, trong đó:
-
-- 60 mẫu có PetalLength < 2.0 → cov(A₁) = 0.6
-- 55 mẫu có PetalWidth < 0.5 → cov(A₂) = 0.55
-- 40 mẫu có SepalLength < 5.0 → cov(A₃) = 0.4
-
-Đây là cách ước lượng coverage thực tế trong ví dụ ở trên.
-
-### Bước 4 – Cập nhật anchor tốt nhất
-
-**Nếu rule A có**:
-
-$prec(A) > \tau \ \text{và} \ cov(A) > cov(A^*)$
-
-**thì cập nhật**: A* = A
-
-#### Ví dụ:
+### 🔹 Bước 3 – Sinh tổ hợp mới
 
 Kết hợp 2 rule đầu:
 
-$A₄ = {PetalLength < 2.0, PetalWidth < 0.5}$
+$$A_4 = \{\text{PetalLength} < 2.0, \text{PetalWidth} < 0.5\}$$
 
-Giả sử sinh 5 mẫu nhiễu thỏa A₄:
+Giả sử sinh 5 mẫu nhiễu thỏa $A_4$:
 
-| z | PetalLength | PetalWidth | f(z) |
-|---|-------------|-----------|------|
-| z₁ | 1.5 | 0.4 | Setosa |
-| z₂ | 1.8 | 0.3 | Setosa |
-| z₃ | 1.2 | 0.4 | Setosa |
-| z₄ | 1.7 | 0.4 | Setosa |
-| z₅ | 1.9 | 0.4 | Versicolor |
+| z  | PetalLength | PetalWidth | f(z)       |
+|----|-------------|------------|------------|
+| z₁ | 1.5         | 0.4        | Setosa     |
+| z₂ | 1.8         | 0.3        | Setosa     |
+| z₃ | 1.2         | 0.4        | Setosa     |
+| z₄ | 1.7         | 0.4        | Setosa     |
+| z₅ | 1.9         | 0.4        | Versicolor |
 
-Tính toán:
+$$\text{prec}(A_4) = \frac{4}{5} = 0.8, \quad \text{cov}(A_4) = 0.52$$
 
-$prec(A₄) = 4/5 = 0.8, cov(A₄) = 0.52$
+### 🔹 Bước 4 – Sinh rule mạnh hơn
 
 Thêm điều kiện mới:
 
-$A₅ = {PetalLength < 2.0, PetalWidth < 0.5, SepalLength < 5.5}$
+$$A_5 = \{\text{PetalLength} < 2.0, \text{PetalWidth} < 0.5, \text{SepalLength} < 5.5\}$$
 
-Giả sử 5 mẫu nhiễu đều có f(z) = Setosa:
+Giả sử 5 mẫu nhiễu đều có f(z)=Setosa:
 
-$prec(A₅) = 5/5 = 1.0, cov(A₅) = 50/100 = 0.50$
+$$\text{prec}(A_5) = \frac{5}{5} = 1.0$$
 
-(ước lượng: có 50 mẫu trong 100 mẫu dữ liệu thỏa điều kiện này)
+$$\text{cov}(A_5) = \frac{50}{100} = 0.50$$
 
-→ Rule này đạt prec(A₅) ≥ τ = 0.95, cập nhật: A* = A₅
+(ước lượng: 50 trong 100 mẫu trong D thỏa rule này)
 
-✅ Kết quả cuối cùng
---------------------
+→ Rule này đạt $\text{prec} \geq \tau$, cập nhật:
 
-$A* = {PetalLength < 2.0, PetalWidth < 0.5, SepalLength < 5.5}$
+$$A^* = A_5$$
 
-Precision = 1.0, Coverage = 0.50
+---
 
-→ Giải thích của mô hình:
+## ✅ Kết quả cuối cùng
+
+$$A^* = \{\text{PetalLength} < 2.0, \text{PetalWidth} < 0.5, \text{SepalLength} < 5.5\}$$
+
+**Precision = 1.0, Coverage = 0.50**
+
+→ **Giải thích của mô hình:**
 
 "Nếu PetalLength < 2.0, PetalWidth < 0.5, và SepalLength < 5.5, thì mẫu gần như chắc chắn là Setosa."
