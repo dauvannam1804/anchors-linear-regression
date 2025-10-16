@@ -349,3 +349,135 @@ $$A^* = \{\text{PetalLength} < 2.0, \text{PetalWidth} < 0.5, \text{SepalLength} 
 → **Giải thích của mô hình:**
 
 "Nếu PetalLength < 2.0, PetalWidth < 0.5, và SepalLength < 5.5, thì mẫu gần như chắc chắn là Setosa."
+
+## 7️⃣ Anchors cho bài toán Linear Regression
+
+Mặc dù **Anchors** ban đầu được thiết kế cho bài toán **phân loại**, ta vẫn có thể áp dụng cho **bài toán hồi quy tuyến tính (Linear Regression)**.
+
+---
+
+## 🎯 Ý tưởng chính
+
+Thay vì giải thích vì sao mô hình dự đoán một **lớp nhãn cụ thể**, ta sẽ:
+
+1. **Chuyển bài toán hồi quy thành phân loại nhị phân** dựa trên ngưỡng (ví dụ: giá trị dự đoán lớn hơn trung vị thì là *High*, ngược lại là *Low*).  
+2. **Sử dụng Anchors Tabular Explainer** để tìm ra những điều kiện trên các đặc trưng *(TV, Radio, Newspaper)* khiến mô hình dự đoán “High” với **độ tin cậy cao**.
+
+---
+
+## 💡 Cách làm này giúp ta hiểu
+
+- “**Khi nào mô hình dự đoán doanh số cao?**”  
+- “**Những yếu tố nào của chiến dịch quảng cáo đủ mạnh để giữ ổn định dự đoán ‘Sales cao’?**”
+
+---
+
+## ⚙️ Code minh họa với tập dữ liệu Advertising
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from anchor import anchor_tabular
+from mpl_toolkits.mplot3d import Axes3D
+
+data = pd.read_csv("advertising.csv")
+X = data[["TV", "Radio", "Newspaper"]].values
+y = data["Sales"].values
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+
+feature_names = ["TV", "Radio", "Newspaper"]
+
+explainer = anchor_tabular.AnchorTabularExplainer(
+    class_names=["Low", "High"],
+    feature_names=feature_names,
+    train_data=X_train
+)
+
+
+threshold = np.median(y_train)
+def predict_fn(x):
+    preds = model.predict(x)
+    return (preds > threshold).astype(int)
+
+
+instance = X_test[0]
+print(f"Instance cần xử lý:\n X = [TV = {instance[0]:.2f}, Radio = {instance[1]:.2f}, Newspaper = {instance[2]:.2f}]")
+exp = explainer.explain_instance(instance, predict_fn, threshold=0.95)
+
+print("Prediction class:", "High" if predict_fn(instance.reshape(1, -1))[0] else "Low")
+print("Anchor explanation:", exp.names())
+print("Precision:", exp.precision())
+print("Coverage:", exp.coverage())
+
+
+fig = plt.figure(figsize=(10, 7))
+ax = fig.add_subplot(111, projection='3d')
+
+x = X_test[:, 0]  # TV
+y = X_test[:, 1]  # Radio
+z = X_test[:, 2]  # Newspaper
+preds = model.predict(X_test)
+
+# Vẽ điểm dựa trên phân loại (Low/High)
+colors = ['red' if p > threshold else 'blue' for p in preds]
+
+ax.scatter(x, y, z, c=colors, s=50, edgecolors='k')
+ax.scatter(instance[0], instance[1], instance[2], c='black', s=200, marker='*', label='Explained instance')
+
+ax.set_xlabel('TV')
+ax.set_ylabel('Radio')
+ax.set_zlabel('Newspaper')
+ax.set_title('3D Visualization of Anchors (TV, Radio, Newspaper)')
+plt.legend()
+plt.show()
+```
+
+**Output**
+```
+Instance cần xử lý: 
+ X = [TV = 163.30, Radio = 31.60, Newspaper = 52.90]    
+Prediction class: High  
+Anchor explanation: ['TV > 150.65', 'Radio > 21.20']    
+Precision: 1.0  
+Coverage: 0.2696    
+```
+
+[chèn ảnh]
+
+## 📘 Diễn giải kết quả mô hình
+
+### Tại sao mô hình dự đoán "Sales cao" cho mẫu này?
+
+Mô hình đã phân tích mẫu dữ liệu sau:
+- **Chi phí quảng cáo trên TV**: 163.3
+- **Chi phí quảng cáo trên Radio**: 31.6
+- **Chi phí quảng cáo trên Newspaper**: 52.9
+
+Và đưa ra kết luận: **Doanh số sẽ cao (High)**
+
+### 🧱 Quy tắc giải thích (Anchor)
+
+**Mô hình dựa vào điều kiện chính sau:**
+
+Nếu **TV > 150.65** VÀ **Radio > 21.20** → Doanh số sẽ cao
+
+Nói cách khác: Khi chi phí quảng cáo TV vượt 150.65 (đơn vị) **và** Radio vượt 21.20 (đơn vị), thì doanh số sẽ tăng cao.
+
+### Mức độ tin cậy
+
+#### ✅ Độ chính xác (Precision): 100%
+Quy tắc này rất đáng tin cậy! Tất cả các trường hợp thỏa mãn điều kiện trên đều thực sự cho ra doanh số cao. Không có ngoại lệ hay sai sót.
+
+#### 📊 Phạm vi áp dụng (Coverage): 27%
+Quy tắc này chỉ áp dụng cho khoảng **27% các mẫu** trong tập dữ liệu. Có nghĩa là còn 73% các trường hợp doanh số cao khác không tuân theo quy tắc này - chúng có những yếu tố khác quyết định.
