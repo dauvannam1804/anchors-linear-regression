@@ -453,7 +453,10 @@ Precision: 1.0
 Coverage: 0.2696    
 ```
 
-[chèn ảnh]
+<figure>
+  <img src="https://github.com/dauvannam1804/anchors-linear-regression/raw/main/anchors_linear_regression.png" alt="Anchors Linear Regression" width="600"/>
+  <figcaption>Hình 1: Mẫu cần diễn giải kết quả dự đoán</figcaption>
+</figure>
 
 ## 📘 Diễn giải kết quả mô hình
 
