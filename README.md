@@ -243,6 +243,7 @@ Sinh 3 rule ứng viên:
 Công thức tính precision:
 
 $\text{prec}(A) = \dfrac{\text{số mẫu } z \text{ có } f(z) = f(x)}{\text{tổng số mẫu } z \text{ được sinh ra}}$
+
 Kết quả:
 
 | Rule | Precision | Coverage (ước lượng) |
