@@ -74,8 +74,9 @@ Nếu 97% các mẫu thỏa A được mô hình dự đoán cùng nhãn:
 
 ## 4️⃣ Tính toán hiệu quả các Anchors  
 
-Công thức (2) định nghĩa độ chính xác của một anchor:
-$\text{prec}(A) = \mathbb{E}_{D(z|A)} [\mathbf{1}_{f(x)=f(z)}]$
+Công thức (2) định nghĩa độ chính xác của một anchor: 
+
+$\text{prec}(A) = \mathbb{E}_{D(z|A)} \big[ \mathbf{1}_{f(x)=f(z)} \big]$
 
 Tức là **tỉ lệ các mẫu trong không gian điều kiện A mà mô hình vẫn cho cùng dự đoán với mẫu x**.
 
